@@ -1,49 +1,69 @@
-# Bob Skills Collection
+# AI Skills Collection
 
-A complete collection of **63 skills** for [IBM Bob](https://www.ibm.com/products/bob) (and compatible agentic AI tools). Skills are structured instruction packs that activate automatically when you trigger the right context — giving the AI deep, task-specific knowledge without you having to explain everything.
+A complete collection of **63 skills** for AI coding agents and AI chat assistants. Skills are structured instruction packs that activate automatically when you trigger the right context — giving the AI deep, task-specific knowledge without you having to explain everything from scratch.
 
 > Built and maintained by [@viratsaroj](https://github.com/viratsaroj)
 
 ---
 
+## Compatible With
+
+| Tool | Skills location |
+|------|----------------|
+| **IBM Bob** | `~/.bob/skills/` |
+| **Claude Code** (Anthropic) | `~/.claude/skills/` |
+| **Cursor** | `~/.cursor/skills/` or project `.cursor/skills/` |
+| **Windsurf / Codeium** | `~/.codeium/skills/` |
+| **GitHub Copilot** | Paste `SKILL.md` content into a custom instruction file |
+| **Gemini Code Assist** | Paste `SKILL.md` content into system instructions |
+| **Any agent** that supports a custom skills/instructions folder | Drop the folder into the configured path |
+
+Skills are plain markdown — they work with **any AI agent or chatbot** that supports custom system instructions, skill files, or persistent context. You are not locked into any single tool.
+
+---
+
 ## What is a Skill?
 
-A **skill** is a folder containing a `SKILL.md` file (and optional reference docs, templates, and scripts). When Bob detects a matching intent in your message, it loads the skill and gains expert-level, up-to-date instructions for that task — going far beyond its base training.
+A **skill** is a folder containing a `SKILL.md` file (and optional reference docs, templates, and scripts). When an AI agent detects a matching intent in your message, it loads the skill and gains expert-level, task-specific instructions for that domain — going far beyond its base training.
 
-**Compatible with:** IBM Bob · Any agent that supports `~/.claude/skills/`, `~/.agents/skills/`, or `~/.bob/skills/` skill loading.
+**You can also use skills manually**: paste the contents of any `SKILL.md` into your system prompt or at the start of a conversation with any AI chatbot (ChatGPT, Claude, Gemini, etc.) to activate that skill instantly.
 
 ---
 
 ## Quick Install
 
-### Option 1 — Clone directly into Bob's skills folder
+### Option 1 — Clone directly into your agent's skills folder
 
 ```bash
-# For IBM Bob / Claude Code (primary location)
+# IBM Bob
 git clone https://github.com/viratsaroj/bob-skills.git
+cp -r bob-skills/skills/* ~/.bob/skills/
+
+# Claude Code (Anthropic)
 cp -r bob-skills/skills/* ~/.claude/skills/
 
-# For IBM Agents (secondary location)
+# IBM Agents
 cp -r bob-skills/skills/* ~/.agents/skills/
-
-# For Bob (another location Bob reads)
-cp -r bob-skills/skills/* ~/.bob/skills/
 ```
 
 ### Option 2 — Clone anywhere and symlink
 
 ```bash
-git clone https://github.com/viratsaroj/bob-skills.git ~/bob-skills
+git clone https://github.com/viratsaroj/bob-skills.git ~/ai-skills
 
-# Symlink each skill you want
-ln -s ~/bob-skills/skills/founder-board ~/.claude/skills/founder-board
-ln -s ~/bob-skills/skills/agency-seo ~/.claude/skills/agency-seo
+# Symlink only the skills you want
+ln -s ~/ai-skills/skills/founder-board ~/.claude/skills/founder-board
+ln -s ~/ai-skills/skills/agency-seo ~/.claude/skills/agency-seo
 # ... etc
 ```
 
 ### Option 3 — Pick only what you need
 
-Download individual skill folders from the `skills/` directory and place them in `~/.claude/skills/` on your machine.
+Download individual skill folders from the `skills/` directory and place them in your agent's skills path.
+
+### Option 4 — Use manually with any AI chatbot
+
+Copy the contents of any `SKILL.md` and paste it at the start of a ChatGPT, Claude, Gemini, or any other AI conversation to give it instant expert knowledge for that skill.
 
 ---
 
@@ -77,8 +97,8 @@ A complete agency operating system — from client proposals to delivery:
 | `agency-social-media` | Social media strategy, content calendars, growth |
 | `agency-sprint-planning` | Agile sprint planning, backlog grooming, velocity |
 | `agency-technical-writing` | Docs, READMEs, API references, guides |
-| `agency-testing-qa` | Test plans, QA processes, automated testing strategy |
-| `agency-ui-design-review` | UI design critique and improvement recommendations |
+| `agency-testing-qa` | AI task workflow, TDD, adversarial testing, QA automation |
+| `agency-ui-design-review` | UI critique + 17 UX/psychology laws (Fitts, Hick, Gestalt…) |
 | `agency-ux-research` | User research, interviews, usability testing |
 | `agency-virtual-company` | Run a virtual agency/company — ops, hiring, culture |
 
@@ -170,7 +190,7 @@ board → competitors → consumer → pricing → offer → cfo → marketing �
 
 ## How Skills Are Triggered
 
-Skills activate when Bob detects relevant intent in your message. Each `SKILL.md` has a `description:` field that lists trigger phrases. Examples:
+Skills activate when an AI agent detects relevant intent in your message. Each `SKILL.md` has a `description:` field that lists trigger phrases. Examples:
 
 - Say **"test my business idea"** → `founder-board` activates
 - Say **"write an SEO strategy"** → `agency-seo` activates
@@ -178,13 +198,15 @@ Skills activate when Bob detects relevant intent in your message. Each `SKILL.md
 - Say **"fine-tune a model on SageMaker"** → `aws-ai-ml` activates
 - Say **"write a CDK stack for..."** → `aws-cdk` activates
 - Say **"migrate my Lovable app to AWS"** → `launch-with-aws` activates
+- Say **"review this UI design"** → `agency-ui-design-review` activates (now includes 17 UX laws)
+- Say **"set up TDD for my project"** → `agency-testing-qa` activates (now includes AI workflow)
 
 ---
 
 ## Folder Structure
 
 ```
-bob-skills/
+ai-skills/
 ├── README.md
 └── skills/
     ├── agency-seo/
@@ -204,11 +226,11 @@ bob-skills/
 ## Keeping Skills Updated
 
 ```bash
-cd bob-skills
+cd bob-skills   # or wherever you cloned it
 git pull
+cp -r skills/* ~/.bob/skills/
 cp -r skills/* ~/.claude/skills/
 cp -r skills/* ~/.agents/skills/
-cp -r skills/* ~/.bob/skills/
 ```
 
 ---
@@ -232,7 +254,17 @@ Your instructions here...
 ```
 
 3. Optionally add `references/`, `assets/`, or `scripts/` subfolders.
-4. Place the folder in `~/.claude/skills/` and restart Bob.
+4. Place the folder in your agent's skills directory and restart it.
+
+---
+
+## Why Plain Markdown?
+
+Skills are intentionally just markdown files — no proprietary format, no SDK, no lock-in. This means:
+- They work today with IBM Bob, Claude, Cursor, Windsurf, and any other agent that reads instruction files
+- They work tomorrow with whatever tool ships next year
+- You can read, edit, and version them yourself
+- They can be pasted directly into any AI chatbot as a system prompt
 
 ---
 

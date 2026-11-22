@@ -93,11 +93,181 @@ export async function verifyPassword(plaintext: string, hash: string): Promise<b
 // Never: MD5, SHA-1, SHA-256 alone for passwords — always bcrypt/argon2/scrypt
 ```
 
+### HttpOnly Cookie — Storing Refresh Tokens Securely
+
+The refresh token must **never** go to `localStorage` or the response body for client-side storage. Set it as an `httpOnly` cookie — JavaScript cannot read it, so XSS attacks cannot steal it.
+
+```typescript
+// lib/auth/cookies.ts
+import { Response, Request } from 'express';
+
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+export function setRefreshTokenCookie(res: Response, refreshToken: string): void {
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,          // JS cannot read this cookie — blocks XSS token theft
+    secure: IS_PROD,         // HTTPS only in production
+    sameSite: 'strict',      // Never sent on cross-site requests — blocks CSRF
+    maxAge: 30 * 24 * 60 * 60 * 1000,  // 30 days in ms
+    path: '/api/auth',       // Scoped to auth routes only — not sent on every request
+  });
+}
+
+export function clearRefreshTokenCookie(res: Response): void {
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: 'strict',
+    path: '/api/auth',
+  });
+}
+
+export function getRefreshTokenFromCookie(req: Request): string | undefined {
+  return req.cookies?.refreshToken;
+}
+```
+
+### Login — Issue Both Tokens
+```typescript
+// POST /api/auth/login
+export async function login(req: Request, res: Response) {
+  const { email, password } = req.body;
+
+  const user = await getUserByEmail(email);
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    return res.status(401).json({ error: { code: 'INVALID_CREDENTIALS', message: 'Email or password is incorrect' } });
+  }
+
+  const accessToken = signAccessToken(user.id);
+  const refreshToken = signRefreshToken(user.id);
+
+  // Store refresh token hash in DB (for rotation/revocation)
+  const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+  await db.refreshTokens.create({
+    data: { userId: user.id, tokenHash, expiresAt: addDays(new Date(), 30) }
+  });
+
+  // Refresh token → httpOnly cookie (never in response body)
+  setRefreshTokenCookie(res, refreshToken);
+
+  // Access token → response body (client stores in memory only)
+  res.json({
+    accessToken,         // Client holds this in memory / React state — never localStorage
+    user: { id: user.id, email: user.email, name: user.name },
+  });
+}
+```
+
+### Token Refresh — Rotate the Cookie
+```typescript
+// POST /api/auth/refresh
+export async function refreshTokens(req: Request, res: Response) {
+  const incomingRefreshToken = getRefreshTokenFromCookie(req);
+
+  if (!incomingRefreshToken) {
+    return res.status(401).json({ error: { code: 'NO_REFRESH_TOKEN' } });
+  }
+
+  // Verify the JWT
+  let payload: { sub: string };
+  try {
+    payload = jwt.verify(incomingRefreshToken, process.env.JWT_REFRESH_SECRET!) as { sub: string };
+  } catch {
+    clearRefreshTokenCookie(res);
+    return res.status(401).json({ error: { code: 'INVALID_REFRESH_TOKEN' } });
+  }
+
+  // Check DB — is this token still valid? (not revoked, not already used)
+  const tokenHash = crypto.createHash('sha256').update(incomingRefreshToken).digest('hex');
+  const storedToken = await db.refreshTokens.findUnique({ where: { tokenHash } });
+
+  if (!storedToken || storedToken.revokedAt || storedToken.expiresAt < new Date()) {
+    // Reuse detected — invalidate entire family (potential token theft)
+    await db.refreshTokens.updateMany({
+      where: { userId: payload.sub },
+      data: { revokedAt: new Date() },
+    });
+    clearRefreshTokenCookie(res);
+    return res.status(401).json({ error: { code: 'REFRESH_TOKEN_REUSED' } });
+  }
+
+  // Rotate: revoke old token, issue new pair
+  await db.refreshTokens.update({ where: { tokenHash }, data: { revokedAt: new Date() } });
+
+  const newAccessToken = signAccessToken(payload.sub);
+  const newRefreshToken = signRefreshToken(payload.sub);
+
+  const newTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
+  await db.refreshTokens.create({
+    data: { userId: payload.sub, tokenHash: newTokenHash, expiresAt: addDays(new Date(), 30) }
+  });
+
+  setRefreshTokenCookie(res, newRefreshToken);  // New cookie replaces old
+  res.json({ accessToken: newAccessToken });
+}
+```
+
+### Logout — Clear Cookie and Revoke Token
+```typescript
+// POST /api/auth/logout
+export async function logout(req: Request, res: Response) {
+  const refreshToken = getRefreshTokenFromCookie(req);
+
+  if (refreshToken) {
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    await db.refreshTokens.updateMany({ where: { tokenHash }, data: { revokedAt: new Date() } });
+  }
+
+  clearRefreshTokenCookie(res);  // Remove the cookie from the browser
+  res.status(204).send();
+}
+```
+
+### Next.js App Router Pattern (Server Actions / Route Handlers)
+```typescript
+// app/api/auth/login/route.ts
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+
+export async function POST(req: Request) {
+  const { email, password } = await req.json();
+  // ... validate credentials ...
+
+  const refreshToken = signRefreshToken(user.id);
+  const accessToken = signAccessToken(user.id);
+
+  // Set httpOnly cookie via Next.js cookies() API
+  cookies().set('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 30 * 24 * 60 * 60,  // seconds in Next.js (not ms)
+    path: '/api/auth',
+  });
+
+  return NextResponse.json({ accessToken, user: { id: user.id, email: user.email } });
+}
+```
+
+### Cookie vs. localStorage — Why httpOnly Wins
+| | `httpOnly` Cookie | `localStorage` |
+|---|---|---|
+| XSS attack steals token | ❌ No — JS cannot read it | ✅ Yes — `localStorage` is fully readable by JS |
+| CSRF attack sends token | Mitigated by `SameSite=Strict` | ❌ Not applicable (sent in header manually) |
+| Persists across tabs | ✅ Yes | ✅ Yes |
+| Survives page refresh | ✅ Yes | ✅ Yes |
+| Works in SSR/Server Components | ✅ Yes — readable server-side | ❌ No — browser-only API |
+| Sent automatically | ✅ Yes (to same origin) | ❌ No — must attach manually |
+
+**Rule**: access token in memory (React state), refresh token in `httpOnly` cookie. Never store either in `localStorage`.
+
 ### Session Security Checklist
 - [ ] Refresh tokens stored in `httpOnly`, `Secure`, `SameSite=Strict` cookies — never `localStorage`
-- [ ] Access tokens in memory only (React state/closure) — never persisted
-- [ ] Refresh token rotation: issue a new refresh token on every use, invalidate the old one
-- [ ] Refresh token family tracking: if a reused refresh token is detected, invalidate the entire family (stolen token detection)
+- [ ] Access tokens in memory only (React state/closure) — never persisted to storage
+- [ ] Refresh token hash stored in DB — enables revocation and rotation tracking
+- [ ] Refresh token rotation: every `/api/auth/refresh` issues a new token and revokes the old one
+- [ ] Refresh token reuse detection: if old token is reused, revoke all tokens for that user immediately
+- [ ] Cookie scoped to `/api/auth` path — not sent on every API request
 - [ ] Rate limiting on `/auth/login`: max 10 attempts per IP per 15 minutes
 - [ ] Audit log every login, logout, password change, and token refresh
 

@@ -1,4 +1,4 @@
-﻿---
+---
 name: agency-api-design
 description: Use when designing, reviewing, or evolving REST APIs, GraphQL APIs, gRPC services, webhooks, API versioning strategies, pagination patterns, error response formats, authentication schemes, rate limiting, or API contracts. Triggers on: API design, REST API, GraphQL, gRPC, endpoint design, API versioning, rate limiting, pagination, API contract, webhook design, API review, OpenAPI spec, or any request to design or critique an API interface.
 ---
@@ -278,6 +278,94 @@ Before approving any API for production:
 
 ---
 
+## Phase 7 — Security Headers & SaaS API Patterns
+
+### Security Headers (required on every API response)
+```typescript
+// Express middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('X-Request-ID', req.headers['x-request-id'] ?? crypto.randomUUID());
+  next();
+});
+
+// CORS — explicitly enumerate allowed origins, never use '*' for authenticated APIs
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowed = (process.env.ALLOWED_ORIGINS ?? '').split(',');
+    if (!origin || allowed.includes(origin)) callback(null, true);
+    else callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+}));
+```
+
+### API Key Authentication Pattern
+```typescript
+// Middleware for API key auth (for external/programmatic access)
+export async function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
+  const key = req.headers['x-api-key'] as string;
+  if (!key) return res.status(401).json({ error: { code: 'API_KEY_REQUIRED' } });
+
+  // Hash the incoming key and look it up
+  const keyHash = crypto.createHash('sha256').update(key).digest('hex');
+  const apiKey = await db.apiKeys.findUnique({
+    where: { keyHash },
+    include: { organization: true },
+  });
+
+  if (!apiKey || apiKey.revokedAt || (apiKey.expiresAt && apiKey.expiresAt < new Date())) {
+    return res.status(401).json({ error: { code: 'INVALID_API_KEY' } });
+  }
+
+  // Update last used (async, don't await — don't slow down the request)
+  db.apiKeys.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } }).catch(() => {});
+
+  req.organization = apiKey.organization;
+  req.apiKeyId = apiKey.id;
+  next();
+}
+```
+
+### Tenant-Scoped API Responses
+```typescript
+// Every response from a multi-tenant API should include the organization context
+// to prevent clients from mixing up tenant data
+res.json({
+  data: result,
+  meta: {
+    organizationId: req.organization.id,
+    requestId: res.getHeader('X-Request-ID'),
+  },
+});
+```
+
+### Idempotency for Mutations
+```typescript
+// POST endpoints that create resources should support Idempotency-Key header
+export async function createOrder(req: Request, res: Response) {
+  const idempotencyKey = req.headers['idempotency-key'] as string;
+
+  if (idempotencyKey) {
+    const cached = await redis.get(`idempotency:${idempotencyKey}`);
+    if (cached) return res.status(200).json(JSON.parse(cached));
+  }
+
+  const order = await db.orders.create({ data: { ...req.body, userId: req.userId } });
+
+  if (idempotencyKey) {
+    await redis.setex(`idempotency:${idempotencyKey}`, 86400, JSON.stringify(order));
+  }
+
+  res.status(201).json(order);
+}
+```
+
+---
+
 ## Non-Negotiable Standards
 
 - Never return 200 OK with an error in the body — use the correct HTTP status code.
@@ -286,3 +374,6 @@ Before approving any API for production:
 - Authentication must be documented and mandatory — never "optional" for endpoints that mutate data.
 - Breaking changes require a new API version — never break existing clients silently.
 - All webhooks must include HMAC signature verification instructions for consumers.
+- Security headers (X-Content-Type-Options, HSTS, X-Frame-Options) must be set on every API response.
+- CORS must explicitly enumerate allowed origins — never use `*` for authenticated APIs.
+- API keys must be stored as hashes — never the raw key — and returned to the user only once at creation.

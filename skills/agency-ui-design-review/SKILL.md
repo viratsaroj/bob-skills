@@ -471,6 +471,37 @@ Three types of cognitive load to manage:
 
 ---
 
+## Phase 9 — React / Next.js Component Review
+
+When reviewing a UI built in React or Next.js with Tailwind, apply these additional checks:
+
+### Tailwind Consistency
+- [ ] No arbitrary values (`w-[347px]`) when a scale value exists — flag and suggest the correct scale step
+- [ ] `cn()` utility (clsx + tailwind-merge) used for conditional class composition — not string concatenation
+- [ ] Responsive classes follow mobile-first order: base → `sm:` → `md:` → `lg:`
+- [ ] No inline style attributes when a Tailwind utility covers the case
+
+### Component Accessibility (React-specific)
+- [ ] Interactive `<div>` or `<span>` elements: flag and replace with semantic HTML (`<button>`, `<a>`, `<input>`)
+- [ ] `onClick` handlers on non-interactive elements: add `role="button"`, `tabIndex={0}`, and `onKeyDown` for Enter/Space
+- [ ] Form inputs linked to `<label>` with `htmlFor` / `id` — not just placeholder text
+- [ ] Error messages use `role="alert"` or `aria-live="polite"` so screen readers announce them
+
+### Animation Review (Framer Motion)
+- [ ] `prefers-reduced-motion` respected — use `useReducedMotion()` hook and disable/minimize animations
+- [ ] Animation durations: micro-interactions ≤ 200ms, page transitions ≤ 350ms
+- [ ] Easing: `easeOut` for entering elements, `easeIn` for exiting — not `linear`
+- [ ] No animations on elements with `display: none` / unmounted — animations only on mounted, visible elements
+
+### Next.js-Specific
+- [ ] `next/image` used for all content images — not raw `<img>` tags
+- [ ] `loading="lazy"` not set on above-the-fold images — use `priority` prop instead
+- [ ] `sizes` prop set on `fill` images — without it, the browser downloads full-resolution images
+- [ ] `loading.tsx` exists for pages with async data fetching
+- [ ] `error.tsx` exists as an error boundary for pages
+
+---
+
 ## Non-Negotiable Standards
 
 - Never say "looks good" — if something is good, say specifically why it works.
@@ -481,3 +512,4 @@ Three types of cognitive load to manage:
 - Never approve a mobile screen that shows a blank state while content loads — always require a skeleton or spinner.
 - Never approve a feed screen that does not restore scroll position on return.
 - Never approve a composition screen (post/comment/message) that does not implement auto-save.
+- Never approve interactive `<div>` elements without semantic role, tabIndex, and keyboard handler — accessibility is a requirement, not a nice-to-have.

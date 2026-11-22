@@ -1,4 +1,4 @@
-﻿---
+---
 name: agency-devops
 description: Use when designing CI/CD pipelines, containerization (Docker, Kubernetes), infrastructure as code, deployment strategies (blue-green, canary, rolling), monitoring and alerting setup, log aggregation, incident response, SRE practices, SLA/SLO/SLI definitions, on-call procedures, disaster recovery, or any operational engineering task. Triggers on: CI/CD, Docker, Kubernetes, Helm, Terraform, deployment pipeline, blue-green deployment, canary release, monitoring, alerting, Prometheus, Grafana, Datadog, incident response, SLO, SLI, on-call, disaster recovery, infrastructure as code, or any request involving deploying, operating, or monitoring production systems.
 ---
@@ -348,6 +348,114 @@ Alert: fire when burn rate exceeds safe threshold
 
 ---
 
+## Phase 7 — Docker Compose for Local Development
+
+```yaml
+# docker-compose.yml
+version: '3.9'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/app_dev
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - .:/app            # Mount source for hot-reload in development
+      - /app/node_modules # Prevent host node_modules from overwriting container's
+    command: npm run dev
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: app_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+```
+
+### Docker Compose Tips
+- Use `condition: service_healthy` for DB-dependent services — prevents startup race conditions
+- Mount source code for hot-reload; use an anonymous volume for `node_modules` to prevent overwrite
+- Use `.env.development` for local secrets — never commit it
+- `docker compose up --build` on first run; `docker compose up` for subsequent runs
+
+---
+
+## Phase 8 — Lighthouse & Performance Audit in CI
+
+```yaml
+# .github/workflows/perf.yml — run on every PR
+name: Performance Audit
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start app
+        run: |
+          npm ci
+          npm run build
+          npm start &
+          sleep 5
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            http://localhost:3000
+            http://localhost:3000/pricing
+          budgetPath: ./.github/lighthouse-budget.json
+          uploadArtifacts: true
+
+# .github/lighthouse-budget.json
+# {
+#   "performance": 90,
+#   "accessibility": 95,
+#   "best-practices": 90,
+#   "seo": 85
+# }
+```
+
+### Performance Budget Checklist
+- [ ] JavaScript bundle < 200KB gzipped (parse time on mid-range mobile)
+- [ ] LCP element identified and loading with `priority` / `preload`
+- [ ] No render-blocking scripts — defer or async all third-party scripts
+- [ ] Images in WebP/AVIF format with correct `sizes` attribute
+- [ ] API response times: p50 < 100ms, p95 < 500ms (measure in staging under load)
+- [ ] Database queries: N+1 eliminated, slow queries (> 100ms) have indexes
+
+---
+
 ## Non-Negotiable Standards
 
 - Never deploy directly to production without passing through staging.
@@ -357,3 +465,5 @@ Alert: fire when burn rate exceeds safe threshold
 - Incidents must have blameless post-mortems — the goal is system improvement, not blame.
 - Monitoring must alert on user-visible symptoms, not just infrastructure metrics.
 - Resource limits must be set on every Kubernetes container — unbounded resource consumption will cause node evictions.
+- Lighthouse CI must run on every PR — a frontend deploy that regresses Performance below 90 or Accessibility below 95 is not shippable.
+- Docker Compose for local development must mirror production dependencies (same DB version, same Redis version, same environment variables structure).

@@ -283,6 +283,121 @@ When coverage is high but confidence is low, run mutation testing (Stryker for J
 
 ---
 
+## Phase 8 — Payment & Auth Testing Patterns
+
+### Testing Payment Flows
+```typescript
+// Use Stripe test mode — never real cards in tests
+const STRIPE_TEST_CARDS = {
+  success: '4242 4242 4242 4242',
+  declinedCard: '4000 0000 0000 0002',
+  insufficientFunds: '4000 0000 0000 9995',
+  authRequired: '4000 0025 0000 3155',
+};
+
+// Mock Stripe in unit tests — test your logic, not Stripe's SDK
+jest.mock('@/lib/stripe', () => ({
+  stripe: {
+    checkout: {
+      sessions: {
+        create: jest.fn().mockResolvedValue({ url: 'https://checkout.stripe.com/test' }),
+      },
+    },
+  },
+}));
+
+// Integration test webhook processing with real Stripe event shapes
+it('activates subscription on checkout.session.completed', async () => {
+  const event = {
+    id: 'evt_test_123',
+    type: 'checkout.session.completed',
+    data: {
+      object: {
+        id: 'cs_test_123',
+        mode: 'subscription',
+        metadata: { userId: testUser.id },
+        subscription: 'sub_test_123',
+      },
+    },
+  };
+
+  // Process without going through signature verification (unit test of logic)
+  await processStripeEvent(event as any);
+
+  const user = await db.users.findUnique({ where: { id: testUser.id } });
+  expect(user.subscriptionStatus).toBe('active');
+  expect(user.stripeSubscriptionId).toBe('sub_test_123');
+});
+```
+
+### Testing Auth Flows
+```typescript
+// Test all auth boundary cases
+describe('requireAuth middleware', () => {
+  it('returns 401 when no Authorization header', async () => {
+    const res = await request(app).get('/api/orders');
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('returns 401 when token is expired', async () => {
+    const expiredToken = signAccessToken(testUser.id, { expiresIn: '-1s' });
+    const res = await request(app)
+      .get('/api/orders')
+      .set('Authorization', `Bearer ${expiredToken}`);
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('TOKEN_EXPIRED');
+  });
+
+  it('returns 403 when user accesses another tenant', async () => {
+    const otherOrgResource = await createOrder({ organizationId: otherOrg.id });
+    const res = await request(app)
+      .get(`/api/orders/${otherOrgResource.id}`)
+      .set('Authorization', `Bearer ${validToken}`);
+    // Must 404, not 403 — prevents enumeration
+    expect(res.status).toBe(404);
+  });
+});
+```
+
+### Debugging Workflow
+
+#### Systematic Debugging Process
+1. **Reproduce deterministically** — before touching code, write a failing test or script that reproduces the bug 100% of the time
+2. **Narrow the scope** — binary search the call stack: add `console.log` or breakpoints at the midpoint; determine which half contains the bug
+3. **Check assumptions** — log the actual values, not what you think they are: type, shape, null/undefined
+4. **Read the error message completely** — the last line of a stack trace is usually the actual error; the first lines are framework noise
+5. **Check recent changes** — `git log --oneline -20` and `git diff HEAD~1` are the fastest first steps for regressions
+6. **Rubber duck** — explaining the bug out loud (or in writing) surfaces missing assumptions
+
+#### Common Bug Patterns
+```typescript
+// Race condition: two async operations mutating shared state
+// BAD: not atomic
+const count = await getCount(id);
+await updateCount(id, count + 1);
+
+// GOOD: atomic increment
+await db.counters.update({ where: { id }, data: { count: { increment: 1 } } });
+
+// Null dereference: not checking optional chaining
+// BAD:
+const city = user.address.city;  // throws if address is null
+
+// GOOD:
+const city = user.address?.city ?? 'Unknown';
+
+// Async forgot await: promise returned without awaiting
+// BAD:
+const result = db.users.findUnique({ where: { id } });  // Promise, not User
+result.email;  // undefined — result is a Promise object
+
+// GOOD:
+const result = await db.users.findUnique({ where: { id } });
+```
+
+---
+
 ## Non-Negotiable Standards
 
 - Never merge code that reduces test coverage on payment, authentication, or data mutation paths.
@@ -291,3 +406,5 @@ When coverage is high but confidence is low, run mutation testing (Stryker for J
 - Never use `// @ts-ignore` or `any` casts in test files to work around type errors — fix the type or the code.
 - Performance tests must run in CI — a feature that works but causes a 3s regression is not done.
 - Bug reports without reproduction steps are not actionable — always require them.
+- Always test cross-tenant data access attempts — a 404 (not 403) must be returned when a user accesses another tenant's resource.
+- Payment webhook processing must have idempotency tests — sending the same event twice must produce the same result as sending it once.

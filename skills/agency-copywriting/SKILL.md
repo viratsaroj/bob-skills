@@ -1,4 +1,4 @@
-﻿---
+---
 name: agency-copywriting
 description: Use when writing or reviewing any persuasive or conversion-focused copy including landing pages, sales pages, email sequences, ad copy, product descriptions, website hero sections, CTAs, onboarding flows, pitch decks narrative, or any text meant to drive a specific action. Triggers on: writing copy, landing page copy, sales copy, email copy, ad copy, product description, conversion copy, value proposition, tagline, headline, or any request to "write" or "improve" text that must persuade.
 ---
@@ -150,6 +150,73 @@ Tone in [context]: [guidance]
 
 ---
 
+## Phase 5 — Onboarding Email Copy
+
+### Onboarding Sequence Copy Principles
+Onboarding emails have one job: help the user reach the first value moment (activation) before they churn. Every email must remove one friction point or teach one behavior that moves them toward activation.
+
+**The activation email framework**:
+```
+Subject: [Specific action] in [timeframe] — here's exactly how
+
+Body:
+Para 1: Name the specific thing they can do right now that will make them say "this is worth it"
+Para 2: Why this matters (what they'll be able to do / stop doing)
+Para 3: 2–3 step walkthrough (numbered list, specific actions)
+CTA: One button — "[Action verb] [specific thing]"
+P.S.: Anticipate the most common objection and address it in 1 sentence
+```
+
+**7-Day SaaS Onboarding Sequence**:
+| Day | Focus | CTA |
+|---|---|---|
+| 0 | Welcome + deliver promised value | Go to dashboard |
+| 1 | First activation action | Complete [specific action] |
+| 3 | Feature they're probably missing | Try [feature] |
+| 5 | Social proof matching their use case | Read [relevant case study] |
+| 7 | Check-in / ask a question | Reply to this email |
+| 10 | Trial ending (if on trial) | Upgrade now |
+| 14 | Win-back (if not activated) | Last chance: [specific offer] |
+
+---
+
+## Phase 6 — Pricing Page Copy & Strategy
+
+### Pricing Page Copy Framework
+```
+[Section 1] — Anchor the value
+"How much is [the problem they have] costing you right now?"
+Reframe the price relative to the cost of the problem, not competing products.
+
+[Section 2] — Present plans clearly
+3 plans maximum. Middle plan visually highlighted as "Most Popular."
+Plan names: outcome-based ("Solo", "Team", "Scale") not technical ("Basic", "Pro", "Enterprise").
+
+[Section 3] — Justify each price point
+Feature list: lead with outcomes, not features.
+"Unlimited projects" → "Ship as many campaigns as your team needs — no throttling"
+
+[Section 4] — Remove risk
+Money-back guarantee copy: specific (14-day, not "satisfaction guaranteed"), unconditional, prominent.
+"If you don't see value in 14 days, email us for a full refund. No questions asked."
+
+[Section 5] — Social proof by plan
+Put a testimonial next to each plan from a customer on that plan.
+Specificity matters: "We 3× our output with the Team plan" beats "Great product!"
+
+[Section 6] — FAQ that handles real objections
+5–7 questions from actual sales calls and support tickets — not generic questions you invented.
+```
+
+### Pricing Psychology Principles
+- **Anchor high**: show the most expensive plan first (left to right) or lead with annual pricing
+- **Decoy pricing**: a mid-tier plan priced to make the top tier look like obvious value
+- **Charm pricing**: $49/mo vs. $50/mo — the left-digit effect is real
+- **Annual vs. monthly framing**: show annual price divided by 12 (`$29/mo, billed annually`) — shows the lower number, clarifies billing
+- **Free trial vs. freemium**: free trial (time-limited) creates urgency; freemium creates habit. Choose based on your activation time.
+
+---
+
 ## Non-Negotiable Standards
 
 - Never begin with "Are you a [demographic] who struggles with [problem]?" — this is the most overused copywriting cliché and signals low quality.
@@ -158,3 +225,6 @@ Tone in [context]: [guidance]
 - Every testimonial must be specific and results-based — generic praise testimonials add zero persuasion value.
 - If VoC data is not available, state it explicitly and use best-guess language — never fabricate customer emotion.
 - GDPR/CAN-SPAM compliance must be confirmed before any email sequence goes live.
+- Pricing page must have a maximum of 3 plans — more than 3 triggers the Paradox of Choice and reduces conversion.
+- Every onboarding email must have a single CTA — multiple CTAs in a single email reduce click-through rates.
+- Every pricing plan name must communicate the customer type, not a tier — "Solo", "Team", "Scale" beats "Basic", "Pro", "Enterprise".

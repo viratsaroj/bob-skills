@@ -1,4 +1,4 @@
-﻿---
+---
 name: agency-seo
 description: Use when performing SEO audits, keyword research, on-page optimization, technical SEO analysis, backlink strategy, structured data markup, Core Web Vitals improvements, or writing SEO-optimized content. Triggers on mentions of search rankings, organic traffic, meta tags, sitemaps, schema markup, crawlability, indexability, canonical tags, robots.txt, or any request to "optimize for search".
 ---
@@ -117,6 +117,72 @@ Output keyword tables:
 
 ---
 
+## Phase 7 — Blogging SEO & Programmatic SEO
+
+### Blog-Specific SEO
+- **Category/tag pages**: noindex tag and category archive pages unless they have unique editorial content — they're thin duplicates otherwise
+- **Author pages**: add author bio, credentials, and links to published work — E-E-A-T signal
+- **Internal linking from blog**: every new post must link to 1 pillar page and receive links from 2 existing posts on publish day
+- **Freshness signals**: add `dateModified` in schema markup; update `updatedAt` in frontmatter when you refresh content
+- **Blog sitemap**: separate XML sitemap for blog posts; include `lastmod` and `changefreq`
+
+```typescript
+// app/sitemap.ts (Next.js)
+import { getAllPosts } from '@/lib/blog';
+
+export default function sitemap() {
+  const posts = getAllPosts();
+
+  return posts.map(post => ({
+    url: `${process.env.NEXT_PUBLIC_APP_URL}/blog/${post.slug}`,
+    lastModified: post.updatedAt ?? post.publishedAt,
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+  }));
+}
+```
+
+### Programmatic SEO
+Programmatic SEO = generating hundreds or thousands of pages from structured data, each targeting a unique long-tail keyword.
+
+**Use cases**:
+- Location pages: "[Service] in [City]" — 1,000 cities × 1 service = 1,000 pages
+- Integration pages: "[Tool A] + [Tool B] integration" — 50 tools × 50 tools = 2,500 pages
+- Template pages: "[Job title] resume template" — 500 job titles = 500 pages
+- Comparison pages: "[Product] vs [Competitor]" — 10 competitors × category pages
+
+**Quality bar**: programmatic pages must have unique, valuable content on each page — not just swapped city/keyword with identical body copy. Google will deindex thin programmatic content.
+
+```typescript
+// Next.js: generate 1000 city pages from database
+// app/[service]/[city]/page.tsx
+export async function generateStaticParams() {
+  const locations = await db.locations.findMany({ select: { citySlug: true, serviceSlug: true } });
+  return locations.map(l => ({ service: l.serviceSlug, city: l.citySlug }));
+}
+
+export async function generateMetadata({ params }) {
+  const location = await db.locations.findUnique({
+    where: { citySlug_serviceSlug: { citySlug: params.city, serviceSlug: params.service } }
+  });
+  return {
+    title: `${location.serviceName} in ${location.cityName} | YourApp`,
+    description: `Find the best ${location.serviceName.toLowerCase()} providers in ${location.cityName}. ${location.listingCount} verified providers.`,
+  };
+}
+```
+
+### Content Decay Recovery
+```
+Step 1: Identify — GSC: pages ranking #4–#20 with declining impressions over 90 days
+Step 2: Diagnose — has intent shifted? Is competing content newer/deeper? Are there technical issues?
+Step 3: Update — refresh statistics, examples, screenshots; add new sections; expand thin areas
+Step 4: Signal — update `dateModified` in schema; submit URL to GSC for recrawl
+Step 5: Measure — check ranking and CTR change over 30-60 days
+```
+
+---
+
 ## Non-Negotiable Standards
 
 - Never recommend keyword density targets — Google is semantic.
@@ -124,3 +190,6 @@ Output keyword tables:
 - Tie every recommendation to measurable outcomes (CTR, rankings, crawl budget, conversions).
 - When uncertain about current algorithm behavior, say so — never fabricate ranking factors.
 - If GSC or analytics data is available, base recommendations on actual data.
+- Blog category and tag archive pages must be noindexed unless they have unique editorial content — thin archives are a crawl budget drain.
+- Every new blog post must receive internal links from 2 existing posts on the same publish day — orphan posts don't rank.
+- Programmatic SEO pages must have genuinely unique content per page — identical templates with swapped keywords will be deindexed.

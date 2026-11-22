@@ -1,4 +1,4 @@
-﻿---
+---
 name: agency-database-design
 description: Use when designing database schemas, data models, entity-relationship diagrams, normalization decisions, indexing strategies, query optimization, database migrations, sharding strategies, multi-tenancy patterns, or choosing between relational vs. NoSQL databases. Triggers on: database design, schema design, data model, ER diagram, normalization, indexes, foreign keys, database migration, sharding, partitioning, multi-tenancy, SQL schema, NoSQL schema, or any request to design or review a database structure.
 ---
@@ -279,6 +279,87 @@ CREATE TABLE comments (
 
 ---
 
+## Phase 7 — SaaS Schema Security Patterns
+
+### Preventing Sensitive Data Exposure
+```sql
+-- Encrypt PII at rest using pgcrypto (or handle encryption in application layer)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Hashed emails for lookup without exposing PII
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email_encrypted BYTEA NOT NULL,          -- AES-256 encrypted, decrypted in app
+  email_hash VARCHAR(64) NOT NULL UNIQUE,  -- SHA-256 for lookup (WHERE email_hash = hash(input))
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Never store: raw API keys, raw tokens, plaintext passwords
+-- Always store: bcrypt/argon2 for passwords, SHA-256 hash for lookup tokens, encrypted for retrievable PII
+```
+
+### API Key Storage Pattern
+```sql
+CREATE TABLE api_keys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,                        -- "Production API Key"
+  key_hash VARCHAR(64) NOT NULL UNIQUE,              -- SHA-256 of the actual key
+  key_prefix VARCHAR(10) NOT NULL,                   -- First 8 chars for display: "sk_live_ab"
+  last_used_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
+  created_by UUID NOT NULL REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  revoked_at TIMESTAMPTZ
+);
+
+-- The raw key (e.g. "sk_live_abcdefgh...") is returned ONCE at creation and never stored
+-- All subsequent verification: hash the incoming key, compare to key_hash
+```
+
+### Webhook Endpoints Storage
+```sql
+CREATE TABLE webhook_endpoints (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  secret_hash VARCHAR(64) NOT NULL,   -- HMAC secret stored as hash
+  events TEXT[] NOT NULL,             -- ['order.created', 'payment.succeeded']
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### Subscription / Billing Schema
+```sql
+CREATE TABLE subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id),
+  stripe_subscription_id VARCHAR(255) UNIQUE,
+  stripe_customer_id VARCHAR(255),
+  plan VARCHAR(50) NOT NULL,
+  status VARCHAR(50) NOT NULL,  -- 'trialing', 'active', 'past_due', 'cancelled'
+  current_period_start TIMESTAMPTZ NOT NULL,
+  current_period_end TIMESTAMPTZ NOT NULL,
+  cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+  trial_end TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE subscription_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id),
+  subscription_id UUID REFERENCES subscriptions(id),
+  event_type VARCHAR(100) NOT NULL,    -- 'subscription.created', 'payment.succeeded'
+  stripe_event_id VARCHAR(255) UNIQUE, -- idempotency: prevent duplicate processing
+  payload JSONB NOT NULL,
+  processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
 ## Non-Negotiable Standards
 
 - Never store money as FLOAT or DOUBLE — always integer cents or NUMERIC(precision, scale).
@@ -288,3 +369,6 @@ CREATE TABLE comments (
 - Never use a single column for two purposes at different times (e.g., "address_line_2" repurposed as "company name for business accounts").
 - Schema changes that could lock production tables must use safe migration techniques (CONCURRENTLY, expand-contract).
 - Multi-tenant schemas must enforce tenant isolation at the database level, not just the application level.
+- Never store raw API keys, tokens, or secrets in the database — always store a hash for lookup and return the plaintext only once.
+- Sensitive PII (email, phone, address) should be encrypted at rest and accessed via application-layer decryption.
+- Every stripe event processed must be recorded with the stripe_event_id as a unique key — prevents double-processing on retries.

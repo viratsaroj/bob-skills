@@ -1,4 +1,4 @@
-﻿---
+---
 name: agency-content-strategy
 description: Use when developing content strategies, editorial calendars, content audits, topic cluster models, thought leadership programs, content distribution plans, or measuring content ROI. Triggers on: content marketing, editorial strategy, content audit, topic clusters, pillar pages, thought leadership, content gaps, editorial calendar, blog strategy, content performance, or any request to plan what content to create and why.
 ---
@@ -140,6 +140,48 @@ Long-form pillar post → structured LinkedIn post series → Instagram carousel
 
 ---
 
+## Phase 8 — Blogging System & Organic Flywheel
+
+### Blog as a Compounding Asset
+A blog works as a compounding channel — the first 50 posts produce trickle traffic; posts 100–300 produce exponential returns. The key insight: older posts grow in authority over time if maintained. The strategy is:
+1. Publish consistently for 12 months (minimum viable time horizon)
+2. Update high-potential posts at month 3, 6, 9, 12 based on GSC data
+3. Build internal links from every new post to existing pillar posts
+4. Convert readers to email subscribers to own the relationship
+
+### Blog Content Calendar (12-week sprint)
+```
+Week 1–2:   Keyword research sprint — build a 90-day backlog of briefs
+Week 3:     Publish pillar post for Cluster 1
+Week 4:     Publish cluster post 1.1 (links to pillar)
+Week 5:     Publish cluster post 1.2 + update any post with GSC impressions > 500 and CTR < 2%
+Week 6:     Publish pillar post for Cluster 2
+...
+Every week: Review GSC for content decay — flag posts ranking #4–#15 for update
+Every month: Measure: organic sessions, email signups from blog, trials from blog
+```
+
+### Blog-to-Email-to-Product Flywheel
+```
+Organic search → blog post
+Blog post → content upgrade (lead magnet matching the topic)
+Lead magnet → email subscriber
+Email subscriber → 7-day onboarding sequence
+Onboarding sequence → trial/signup
+Trial → activation (first value moment)
+Activation → retained customer who shares → referral traffic → more organic
+```
+
+### Measuring Blog ROI
+Track in GA4 + GSC:
+- **Organic sessions from blog** (segment: source = google, landing page contains /blog/)
+- **Email signups from blog** (goal: form submission on /blog/ pages)
+- **Trials attributed to blog** (GA4 attribution: last-click and assisted)
+- **Top 10 posts by organic sessions** — these are your flywheel — update them first
+- **Posts with impressions > 500 but CTR < 2%** — title/meta fix opportunity
+
+---
+
 ## Non-Negotiable Standards
 
 - Never plan content without first understanding what already exists — always audit before adding.
@@ -147,3 +189,6 @@ Long-form pillar post → structured LinkedIn post series → Instagram carousel
 - Original research, proprietary data, and genuine expert opinion are the only durable content moats — recommend building them.
 - Always assign a clear owner, deadline, and success metric to every content piece before it goes into production.
 - Content strategy must be revisited quarterly — it is not a one-time document.
+- Every blog post must have a CTA aligned to its funnel stage — no post ends without a clear next step.
+- Never publish blog content without a keyword brief — unguided content doesn't rank and doesn't compound.
+- Track blog ROI monthly — content without measurement is a cost center, not an investment.

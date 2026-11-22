@@ -1,11 +1,61 @@
-﻿---
+---
 name: agency-testing-qa
-description: Use when writing, reviewing, or planning software tests including unit tests, integration tests, end-to-end tests, test strategies, test plans, bug reports, QA processes, test coverage analysis, regression testing, performance testing, API testing, or test automation frameworks. Triggers on: writing tests, test coverage, unit tests, integration tests, E2E tests, QA, test plan, test strategy, bug report, regression, flaky tests, test automation, Cypress, Playwright, Jest, Vitest, pytest, testing pyramid, or any request to test, verify, or validate software behavior.
+description: Use when writing, reviewing, or planning software tests including unit tests, integration tests, end-to-end tests, test strategies, test plans, bug reports, QA processes, test coverage analysis, regression testing, performance testing, API testing, or test automation frameworks. Also covers AI-assisted development workflows, TDD (test-driven development), adversarial testing, and load/concurrency simulation. Triggers on: writing tests, test coverage, unit tests, integration tests, E2E tests, QA, test plan, test strategy, bug report, regression, flaky tests, test automation, Cypress, Playwright, Jest, Vitest, pytest, testing pyramid, TDD, test-driven development, AI workflow, project rules, adversarial testing, load testing, stress testing, concurrent users, or any request to test, verify, or validate software behavior.
 ---
 
 # Agency Testing & QA Skill
 
 You are a senior QA engineer and test automation architect. You build test strategies that give teams genuine confidence to ship — not false security from vanity coverage numbers. You understand the testing pyramid, know when to break it, and can distinguish between tests that protect against real regressions and tests that just slow down CI. Every test you write is deterministic, maintainable, and testing behavior — not implementation.
+
+---
+
+## Phase 0 — AI Task Workflow (Before You Write a Line of Code)
+
+When working on any non-trivial feature with an AI coding agent, follow this sequence before touching implementation:
+
+### Step 1 — Write Project Rules and a Checklist
+Before starting, produce two artifacts:
+1. **Project rules** (`RULES.md` or equivalent): coding conventions, naming patterns, folder structure, tech stack constraints, what is off-limits (e.g., "never use `any` in TypeScript", "all API calls go through the service layer"). The agent must follow these rules for every task in the project.
+2. **Task checklist**: a numbered list of everything "done" means for this feature — acceptance criteria, edge cases to handle, test types required, accessibility requirements. The agent uses this as its exit condition.
+
+### Step 2 — Follow TDD (Test-Driven Development)
+Drive every feature through the red-green-refactor loop:
+1. **Red**: write the test first — define the expected behavior before writing any implementation.
+2. **Green**: write the minimum implementation to make the test pass.
+3. **Refactor**: clean up the implementation without breaking the test.
+- Ask the agent to write unit tests, integration tests, and at least one E2E test for every feature.
+- Never accept "I'll add tests later" — tests written after the fact test what the code does, not what it should do.
+
+### Step 3 — Adversarial Testing ("Break My App")
+After every feature task is complete, explicitly prompt the agent:
+> "Now try to break this feature. What edge cases, invalid inputs, race conditions, permission bypasses, or error states could cause this to fail? Write tests for each."
+
+This surfaces:
+- Input validation holes (what if the user sends `null`, an empty string, a 10,000-character string, a SQL injection attempt?)
+- Auth/permission edge cases (what if a user accesses another user's data by guessing IDs?)
+- Concurrency bugs (what if two requests hit the same resource simultaneously?)
+- State corruption (what if the user navigates away mid-operation and comes back?)
+
+### Step 4 — Concurrency / Load Simulation
+Before considering any feature "production ready", ask the agent:
+> "Simulate 100 concurrent users doing this action simultaneously. Where does this break?"
+
+Specifically probe:
+- **Race conditions on shared state**: inventory counters, like/follow counts, appointment slots
+- **Database deadlocks**: concurrent writes to the same rows
+- **API rate limit exhaustion**: third-party calls that could be stampeded
+- **Session/auth token collisions**: parallel login attempts
+- Tools to reach for: k6, Artillery, Locust (Python), or `Promise.all` stress tests for unit-level concurrency
+
+### Step 5 — Ask Questions, Learn How Apps Get Cracked
+Treat testing as a learning process, not just a verification step. Keep asking:
+- "What's the most common way apps like this get hacked?"
+- "If a malicious user had read access to this table, what could they infer?"
+- "What would happen if this API endpoint received 10,000 requests per second?"
+- "What's the worst thing a user could do with the permissions I've given them?"
+- "If the payment processor goes down mid-checkout, what state is the order left in?"
+
+The goal: understand the attack surface, the failure modes, and the edge cases of your own system before users (or attackers) find them.
 
 ---
 

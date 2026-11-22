@@ -1,6 +1,6 @@
 # Bob Skills Collection
 
-A complete collection of **35 skills** for [IBM Bob](https://www.ibm.com/products/bob) (and compatible agentic AI tools). Skills are structured instruction packs that activate automatically when you trigger the right context — giving the AI deep, task-specific knowledge without you having to explain everything.
+A complete collection of **63 skills** for [IBM Bob](https://www.ibm.com/products/bob) (and compatible agentic AI tools). Skills are structured instruction packs that activate automatically when you trigger the right context — giving the AI deep, task-specific knowledge without you having to explain everything.
 
 > Built and maintained by [@viratsaroj](https://github.com/viratsaroj)
 
@@ -10,7 +10,7 @@ A complete collection of **35 skills** for [IBM Bob](https://www.ibm.com/product
 
 A **skill** is a folder containing a `SKILL.md` file (and optional reference docs, templates, and scripts). When Bob detects a matching intent in your message, it loads the skill and gains expert-level, up-to-date instructions for that task — going far beyond its base training.
 
-**Compatible with:** IBM Bob · Any agent that supports `~/.claude/skills/` or `~/.agents/skills/` skill loading.
+**Compatible with:** IBM Bob · Any agent that supports `~/.claude/skills/`, `~/.agents/skills/`, or `~/.bob/skills/` skill loading.
 
 ---
 
@@ -20,11 +20,14 @@ A **skill** is a folder containing a `SKILL.md` file (and optional reference doc
 
 ```bash
 # For IBM Bob / Claude Code (primary location)
-git clone https://github.com/viratsaroj/bob-skills.git ~/.claude/bob-skills-repo
-cp -r ~/.claude/bob-skills-repo/skills/* ~/.claude/skills/
+git clone https://github.com/viratsaroj/bob-skills.git
+cp -r bob-skills/skills/* ~/.claude/skills/
 
 # For IBM Agents (secondary location)
-cp -r ~/.claude/bob-skills-repo/skills/* ~/.agents/skills/
+cp -r bob-skills/skills/* ~/.agents/skills/
+
+# For Bob (another location Bob reads)
+cp -r bob-skills/skills/* ~/.bob/skills/
 ```
 
 ### Option 2 — Clone anywhere and symlink
@@ -34,7 +37,7 @@ git clone https://github.com/viratsaroj/bob-skills.git ~/bob-skills
 
 # Symlink each skill you want
 ln -s ~/bob-skills/skills/founder-board ~/.claude/skills/founder-board
-ln -s ~/bob-skills/skills/aws-cdk ~/.claude/skills/aws-cdk
+ln -s ~/bob-skills/skills/agency-seo ~/.claude/skills/agency-seo
 # ... etc
 ```
 
@@ -45,6 +48,46 @@ Download individual skill folders from the `skills/` directory and place them in
 ---
 
 ## Skill Catalogue
+
+### 🏢 Agency Skills (26 skills)
+
+A complete agency operating system — from client proposals to delivery:
+
+| Skill | What it does |
+|-------|-------------|
+| `agency-accessibility` | Audit and fix accessibility (WCAG) in web products |
+| `agency-admin-panel` | Design and build internal admin dashboards |
+| `agency-ai-discoverability` | Optimise products for AI search and discoverability |
+| `agency-api-design` | Design clean, consistent REST and GraphQL APIs |
+| `agency-client-proposals` | Write winning client proposals and SOWs |
+| `agency-code-review` | Structured, actionable code review process |
+| `agency-community-launch` | Launch and grow a community around a product |
+| `agency-content-strategy` | Plan content that drives traffic and conversions |
+| `agency-copywriting` | Write high-converting copy for web, ads, emails |
+| `agency-cybersecurity` | Security audit, threat model, hardening recommendations |
+| `agency-database-design` | Schema design, indexing, query optimisation |
+| `agency-devops` | CI/CD pipelines, infrastructure, deployment automation |
+| `agency-digital-marketing` | Paid and organic digital marketing strategy |
+| `agency-directory-listings` | Get listed in directories and aggregators |
+| `agency-legal` | Contracts, terms of service, privacy policies, compliance |
+| `agency-performance` | Web performance audit and optimisation (Core Web Vitals) |
+| `agency-pr-and-mentions` | PR strategy, press outreach, earned media |
+| `agency-project-scoping` | Scope projects, estimate effort, define deliverables |
+| `agency-seo` | Technical SEO, on-page, link building strategy |
+| `agency-social-media` | Social media strategy, content calendars, growth |
+| `agency-sprint-planning` | Agile sprint planning, backlog grooming, velocity |
+| `agency-technical-writing` | Docs, READMEs, API references, guides |
+| `agency-testing-qa` | Test plans, QA processes, automated testing strategy |
+| `agency-ui-design-review` | UI design critique and improvement recommendations |
+| `agency-ux-research` | User research, interviews, usability testing |
+| `agency-virtual-company` | Run a virtual agency/company — ops, hiring, culture |
+
+### 🤖 AI Meta-Skills
+
+| Skill | What it does |
+|-------|-------------|
+| `llm-council` | Convene a council of LLM personas to debate a question |
+| `unslop` | Rewrite AI-generated slop into sharp, human-sounding prose |
 
 ### 🏗️ AWS Infrastructure
 
@@ -100,7 +143,7 @@ Download individual skill folders from the `skills/` directory and place them in
 | `launch-with-aws` | Migrate vibe-coded / frontend apps to AWS (Lovable, Bolt, Replit, React) |
 | `signing-in-to-aws` | `aws login`, credential setup, session expired fixes |
 
-### 🧠 Founder / Business Skills
+### 🧠 Founder / Business Skills (11 skills)
 
 A complete **Founder Pack** — run each skill in sequence on a new idea, or individually:
 
@@ -130,6 +173,8 @@ board → competitors → consumer → pricing → offer → cfo → marketing �
 Skills activate when Bob detects relevant intent in your message. Each `SKILL.md` has a `description:` field that lists trigger phrases. Examples:
 
 - Say **"test my business idea"** → `founder-board` activates
+- Say **"write an SEO strategy"** → `agency-seo` activates
+- Say **"rewrite this to sound less like AI"** → `unslop` activates
 - Say **"fine-tune a model on SageMaker"** → `aws-ai-ml` activates
 - Say **"write a CDK stack for..."** → `aws-cdk` activates
 - Say **"migrate my Lovable app to AWS"** → `launch-with-aws` activates
@@ -142,17 +187,28 @@ Skills activate when Bob detects relevant intent in your message. Each `SKILL.md
 bob-skills/
 ├── README.md
 └── skills/
+    ├── agency-seo/
+    │   └── SKILL.md          ← main skill instructions
     ├── amazon-bedrock/
-    │   ├── SKILL.md          ← main skill instructions
+    │   ├── SKILL.md
     │   ├── references/       ← deep-dive reference docs
     │   ├── assets/           ← templates, config files
     │   └── scripts/          ← helper scripts the skill may run
-    ├── aws-cdk/
-    │   ├── SKILL.md
-    │   └── references/
     ├── founder-board/
     │   └── SKILL.md
-    └── ... (35 skills total)
+    └── ... (63 skills total)
+```
+
+---
+
+## Keeping Skills Updated
+
+```bash
+cd bob-skills
+git pull
+cp -r skills/* ~/.claude/skills/
+cp -r skills/* ~/.agents/skills/
+cp -r skills/* ~/.bob/skills/
 ```
 
 ---
@@ -177,17 +233,6 @@ Your instructions here...
 
 3. Optionally add `references/`, `assets/`, or `scripts/` subfolders.
 4. Place the folder in `~/.claude/skills/` and restart Bob.
-
----
-
-## Keeping Skills Updated
-
-```bash
-cd ~/path/to/bob-skills
-git pull
-cp -r skills/* ~/.claude/skills/
-cp -r skills/* ~/.agents/skills/
-```
 
 ---
 
